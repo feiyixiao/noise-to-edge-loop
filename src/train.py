@@ -1,4 +1,5 @@
 import copy
+import os
 import time
 
 import numpy as np
@@ -32,7 +33,7 @@ def predict(model, X, bs=256):
     return np.concatenate(out)
 
 
-def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print):
+def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print, ckpt=None):
     C.seed_everything(seed)
     model = build(name)
     opt = torch.optim.Adam(model.parameters(), lr=C.LR)
@@ -40,7 +41,14 @@ def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print):
     Xt, Yt = torch.from_numpy(Xtr), torch.from_numpy(Ytr)
     best, best_state, bad, t0, ep_times = -1, None, 0, time.time(), []
     g = torch.Generator().manual_seed(seed)
-    for ep in range(C.EPOCHS):
+    start, t_prev = 0, 0.0
+    if ckpt and os.path.exists(ckpt):          # resume after a container restart (same RNG stream)
+        s = torch.load(ckpt, weights_only=False)
+        model.load_state_dict(s["model"]); opt.load_state_dict(s["opt"]); g.set_state(s["g"])
+        best, best_state, bad, ep_times, start, t_prev = s["best"], s["best_state"], s["bad"], s["ep_times"], s["ep"], s["t"]
+        log(f"  resumed from epoch {start}")
+    t0 = time.time() - t_prev
+    for ep in range(start, C.EPOCHS):
         te = time.time()
         model.train()
         perm = torch.randperm(n, generator=g)
@@ -63,7 +71,11 @@ def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print):
             best, best_state, bad = vd, copy.deepcopy(model.state_dict()), 0
         else:
             bad += 1
-            if bad >= C.PATIENCE:
-                break
+        if ckpt:
+            torch.save(dict(model=model.state_dict(), opt=opt.state_dict(), g=g.get_state(), best=best,
+                            best_state=best_state, bad=bad, ep_times=ep_times, ep=ep + 1, t=time.time() - t0), ckpt + ".tmp")
+            os.replace(ckpt + ".tmp", ckpt)
+        if bad >= C.PATIENCE:
+            break
     model.load_state_dict(best_state)
     return model, best, time.time() - t0, float(np.mean(ep_times)), ep + 1

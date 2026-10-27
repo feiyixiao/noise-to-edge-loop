@@ -65,7 +65,8 @@ def main():
                     print(f"== {name} rate={rate} filtered={filtered} seed={seed} slices={len(Xtr)}", flush=True)
                     with mlflow.start_run(run_name=f"{name}_r{rate}_f{filtered}_s{seed}"):
                         m, vd, t, ept, ne = fit(name, seed, Xtr, Ytr, Xva, Yva, cva,
-                                                log=lambda s: print(s, flush=True))
+                                                log=lambda s: print(s, flush=True),
+                                                ckpt=f"{R}/ckpt_{name}_r{rate}_f{filtered}_s{seed}.pt")
                         td = case_dice(predict(m, Xte), Yte, cte)
                         mlflow.log_params(dict(model=name, rate=rate, filtered=filtered, seed=seed, split_hash=h,
                                                n_train_cases=len(train_idx)))
@@ -73,6 +74,7 @@ def main():
                     row = [name, rate, filtered, seed, len(train_idx), len(Xtr), f"{vd:.4f}", f"{td:.4f}", ne,
                            f"{t:.1f}", f"{ept:.1f}", h]
                     csv.writer(open(RUNS_CSV, "a")).writerow(row)
+                    os.remove(f"{R}/ckpt_{name}_r{rate}_f{filtered}_s{seed}.pt")
                     if rate == 0.0 and filtered == "n" and seed == 0:
                         import torch
                         torch.save(m.state_dict(), f"{R}/{name}_r0_s0.pt")
