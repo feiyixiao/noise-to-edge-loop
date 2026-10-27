@@ -1,9 +1,107 @@
 == unet_scratch rate=0.0 filtered=n seed=0 slices=3970
-  ep00 loss 1.178 val_dice 0.7632 30.3s
-  ep01 loss 0.739 val_dice 0.7258 26.6s
-  ep02 loss 0.647 val_dice 0.8118 24.4s
-  ep03 loss 0.257 val_dice 0.7328 26.2s
-  ep04 loss 0.286 val_dice 0.8706 24.8s
-  ep05 loss 0.516 val_dice 0.8751 25.9s
-  ep06 loss 0.147 val_dice 0.8825 26.6s
-  ep07 loss 0.113 val_dice 0.8761 25.8s
+  ep00 loss 1.178 val_dice 0.7632 28.8s
+  ep01 loss 0.739 val_dice 0.7258 26.8s
+  ep02 loss 0.647 val_dice 0.8118 25.3s
+  ep03 loss 0.257 val_dice 0.7328 26.1s
+  ep04 loss 0.286 val_dice 0.8706 25.5s
+  ep05 loss 0.516 val_dice 0.8751 24.9s
+  ep06 loss 0.147 val_dice 0.8825 25.7s
+  ep07 loss 0.113 val_dice 0.8761 26.0s
+  ep08 loss 0.140 val_dice 0.8836 26.7s
+== unet_scratch rate=0.0 filtered=n seed=0 slices=3970
+  resumed from epoch 9
+  ep09 loss 0.362 val_dice 0.8735 25.2s
+  ep10 loss 0.127 val_dice 0.8840 26.6s
+  ep11 loss 0.216 val_dice 0.8844 25.0s
+  ep12 loss 0.233 val_dice 0.8795 25.5s
+  ep13 loss 0.193 val_dice 0.8917 22.3s
+  ep14 loss 0.121 val_dice 0.8829 22.8s
+  ep15 loss 0.152 val_dice 0.8843 22.7s
+  ep16 loss 0.830 val_dice 0.8820 22.7s
+  ep17 loss 0.161 val_dice 0.8877 22.1s
+  ep18 loss 0.115 val_dice 0.8906 23.0s
+  ep19 loss 0.192 val_dice 0.8819 23.6s
+  ep20 loss 0.176 val_dice 0.8930 22.8s
+  ep21 loss 0.081 val_dice 0.8929 22.8s
+  ep22 loss 0.401 val_dice 0.8770 22.2s
+  ep23 loss 0.195 val_dice 0.8864 23.0s
+== unet_scratch rate=0.0 filtered=n seed=0 slices=3970
+  resumed from epoch 24
+  ep24 loss 0.175 val_dice 0.8883 24.9s
+== unet_scratch rate=0.0 filtered=n seed=0 slices=3970
+  resumed from epoch 25
+  ep25 loss 0.154 val_dice 0.8926 25.8s
+  ep26 loss 0.211 val_dice 0.8838 24.0s
+  ep27 loss 0.122 val_dice 0.8901 22.8s
+  ep28 loss 0.127 val_dice 0.8885 23.7s
+== unet_scratch rate=0.2 filtered=n seed=0 slices=4013
+  ep00 loss 1.072 val_dice 0.7969 23.2s
+  ep01 loss 0.701 val_dice 0.7202 23.3s
+  ep02 loss 0.487 val_dice 0.8344 25.0s
+  ep03 loss 0.318 val_dice 0.8483 23.7s
+  ep04 loss 0.249 val_dice 0.8114 23.3s
+  ep05 loss 0.259 val_dice 0.8752 24.5s
+  ep06 loss 0.261 val_dice 0.8510 23.9s
+  ep07 loss 0.161 val_dice 0.8721 24.4s
+  ep08 loss 0.217 val_dice 0.8661 26.3s
+  ep09 loss 0.222 val_dice 0.8702 24.9s
+  ep10 loss 0.240 val_dice 0.8832 24.8s
+  ep11 loss 0.211 val_dice 0.8838 24.0s
+  ep12 loss 0.166 val_dice 0.8865 24.2s
+  ep13 loss 0.229 val_dice 0.8604 24.6s
+  ep14 loss 0.243 val_dice 0.8862 24.8s
+  ep15 loss 0.152 val_dice 0.8811 23.6s
+  ep16 loss 0.291 val_dice 0.8918 24.4s
+  ep17 loss 0.138 val_dice 0.8815 25.0s
+  ep18 loss 0.255 val_dice 0.8769 24.6s
+  ep19 loss 0.326 val_dice 0.8889 23.4s
+  ep20 loss 0.152 val_dice 0.8814 25.6s
+  ep21 loss 0.170 val_dice 0.8881 25.1s
+  ep22 loss 0.186 val_dice 0.8824 26.6s
+  ep23 loss 0.172 val_dice 0.8930 25.7s
+  ep24 loss 0.163 val_dice 0.8630 25.1s
+  ep25 loss 0.184 val_dice 0.8912 25.3s
+  ep26 loss 0.196 val_dice 0.8886 25.4s
+  ep27 loss 0.189 val_dice 0.8895 24.1s
+  ep28 loss 0.176 val_dice 0.8824 24.9s
+  ep29 loss 0.152 val_dice 0.8807 24.7s
+== unet_scratch rate=0.4 filtered=n seed=0 slices=4061
+  ep00 loss 1.129 val_dice 0.7370 26.3s
+  ep01 loss 0.767 val_dice 0.7868 25.4s
+  ep02 loss 0.493 val_dice 0.8314 24.1s
+  ep03 loss 0.398 val_dice 0.8353 22.2s
+  ep04 loss 0.317 val_dice 0.8519 22.2s
+  ep05 loss 0.241 val_dice 0.8735 22.8s
+  ep06 loss 0.264 val_dice 0.8676 21.4s
+  ep07 loss 0.225 val_dice 0.8790 21.3s
+  ep08 loss 0.327 val_dice 0.8565 22.3s
+  ep09 loss 0.295 val_dice 0.8422 21.9s
+  ep10 loss 0.245 val_dice 0.8680 21.5s
+  ep11 loss 0.314 val_dice 0.8843 21.6s
+  ep12 loss 0.252 val_dice 0.8873 21.2s
+  ep13 loss 0.213 val_dice 0.8790 21.5s
+  ep14 loss 0.250 val_dice 0.8740 20.8s
+  ep15 loss 0.242 val_dice 0.8843 21.7s
+  ep16 loss 0.316 val_dice 0.8654 21.2s
+  ep17 loss 0.234 val_dice 0.8795 21.1s
+  ep18 loss 0.219 val_dice 0.8831 21.2s
+  ep19 loss 0.233 val_dice 0.8879 20.7s
+  ep20 loss 0.274 val_dice 0.8799 20.8s
+  ep21 loss 0.274 val_dice 0.8885 21.1s
+  ep22 loss 0.249 val_dice 0.8568 21.2s
+  ep23 loss 0.357 val_dice 0.8884 22.0s
+  ep24 loss 0.279 val_dice 0.8822 21.8s
+  ep25 loss 0.225 val_dice 0.8773 21.2s
+  ep26 loss 0.280 val_dice 0.8868 21.4s
+  ep27 loss 0.257 val_dice 0.8615 22.1s
+  ep28 loss 0.321 val_dice 0.8764 22.0s
+  ep29 loss 0.262 val_dice 0.8811 21.5s
+== unet_scratch rate=0.2 filtered=y seed=0 slices=3199
+  ep00 loss 1.164 val_dice 0.7788 17.4s
+  ep01 loss 0.896 val_dice 0.6712 17.2s
+  ep02 loss 0.581 val_dice 0.8103 16.9s
+  ep03 loss 0.487 val_dice 0.7961 17.3s
+  ep04 loss 0.338 val_dice 0.8561 16.9s
+  ep05 loss 0.344 val_dice 0.8046 17.5s
+  ep06 loss 0.286 val_dice 0.8729 16.4s
+  ep07 loss 0.231 val_dice 0.8426 16.7s
