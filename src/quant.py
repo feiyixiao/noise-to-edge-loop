@@ -58,6 +58,9 @@ def main():
     Xte, Yte, cte, _ = slices(split["test"], imgs, clean)
     rows = []
     for name in C.MODELS:
+        if not os.path.exists(f"{R}/{name}_r0_s0.pt"):
+            print("skip (not trained yet):", name)
+            continue
         m = build(name)
         m.load_state_dict(torch.load(f"{R}/{name}_r0_s0.pt"))
         m.eval()

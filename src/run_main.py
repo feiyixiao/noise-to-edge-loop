@@ -42,7 +42,7 @@ def main():
         csv.writer(open(RUNS_CSV, "w")).writerow(FIELDS)
     mlflow.set_tracking_uri("sqlite:///mlflow.db")
     mlflow.set_experiment("noise_to_edge_loop")
-    filt_rows = []
+    filt_rows, sets = [], {}
     for rate in C.RATES:
         masks, damaged = masks_for_rate(rate, clean, split["train"], pool)
         dropped, score = filter_cases(imgs, clean, names, split, masks, rate)
@@ -57,31 +57,36 @@ def main():
             if filtered == "y" and rate == 0.0:
                 continue
             train_idx = [i for i in split["train"] if not (filtered == "y" and i in dropped)]
-            Xtr, Ytr, ctr, _ = slices(train_idx, imgs, [masks.get(i) if i in masks else None for i in range(len(imgs))])
-            for name in C.MODELS:
-                for seed in C.TRAIN_SEEDS:
-                    if (name, rate, filtered, seed) in done:
-                        continue
-                    print(f"== {name} rate={rate} filtered={filtered} seed={seed} slices={len(Xtr)}", flush=True)
-                    with mlflow.start_run(run_name=f"{name}_r{rate}_f{filtered}_s{seed}"):
-                        m, vd, t, ept, ne = fit(name, seed, Xtr, Ytr, Xva, Yva, cva,
-                                                log=lambda s: print(s, flush=True),
-                                                ckpt=f"{R}/ckpt_{name}_r{rate}_f{filtered}_s{seed}.pt")
-                        td = case_dice(predict(m, Xte), Yte, cte)
-                        mlflow.log_params(dict(model=name, rate=rate, filtered=filtered, seed=seed, split_hash=h,
-                                               n_train_cases=len(train_idx)))
-                        mlflow.log_metrics(dict(val_dice=vd, test_dice=td, train_s=t, epochs=ne))
-                    row = [name, rate, filtered, seed, len(train_idx), len(Xtr), f"{vd:.4f}", f"{td:.4f}", ne,
-                           f"{t:.1f}", f"{ept:.1f}", h]
-                    csv.writer(open(RUNS_CSV, "a")).writerow(row)
-                    os.remove(f"{R}/ckpt_{name}_r{rate}_f{filtered}_s{seed}.pt")
-                    if rate == 0.0 and filtered == "n" and seed == 0:
-                        import torch
-                        torch.save(m.state_dict(), f"{R}/{name}_r0_s0.pt")
-    with open(f"{R}/filter_stats.csv", "w", newline="") as f:
+            sets[(rate, filtered)] = (train_idx, slices(train_idx, imgs, [masks.get(i) for i in range(len(imgs))]))
+    with open(f"{R}/filter_stats.csv", "w", newline="") as f:     # independent of training, written first
         w = csv.DictWriter(f, fieldnames=list(filt_rows[0].keys()))
         w.writeheader()
         w.writerows(filt_rows)
+    # breadth-first order so the whole loop closes early: seed -> model -> config
+    order = [(0.0, "n"), (0.2, "n"), (0.4, "n"), (0.2, "y"), (0.4, "y")]
+    for seed in C.TRAIN_SEEDS:
+        for name in C.MODELS:
+            for rate, filtered in order:
+                if (name, rate, filtered, seed) in done:
+                    continue
+                train_idx, (Xtr, Ytr, ctr, _) = sets[(rate, filtered)]
+                print(f"== {name} rate={rate} filtered={filtered} seed={seed} slices={len(Xtr)}", flush=True)
+                ck = f"{R}/ckpt_{name}_r{rate}_f{filtered}_s{seed}.pt"
+                with mlflow.start_run(run_name=f"{name}_r{rate}_f{filtered}_s{seed}"):
+                    m, vd, t, ept, ne = fit(name, seed, Xtr, Ytr, Xva, Yva, cva,
+                                            log=lambda s: print(s, flush=True), ckpt=ck)
+                    td = case_dice(predict(m, Xte), Yte, cte)
+                    mlflow.log_params(dict(model=name, rate=rate, filtered=filtered, seed=seed, split_hash=h,
+                                           n_train_cases=len(train_idx)))
+                    mlflow.log_metrics(dict(val_dice=vd, test_dice=td, train_s=t, epochs=ne))
+                row = [name, rate, filtered, seed, len(train_idx), len(Xtr), f"{vd:.4f}", f"{td:.4f}", ne,
+                       f"{t:.1f}", f"{ept:.1f}", h]
+                csv.writer(open(RUNS_CSV, "a")).writerow(row)
+                os.remove(ck)
+                if rate == 0.0 and filtered == "n" and seed == 0:
+                    import torch
+                    torch.save(m.state_dict(), f"{R}/{name}_r0_s0.pt")
+    open(f"{R}/train_done", "w").write("done\n")
 
 
 if __name__ == "__main__":
