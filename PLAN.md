@@ -56,6 +56,17 @@ Create `DESIGN.md`, `README.md`, `results/`, `src/`, `run_all.py`. Pin seeds (nu
 - On the test slices compare FP32 vs INT8: Dice, file size (MB), median and p95 latency per slice on CPU (single thread, batch 1, 200 runs after 20 warm-up runs). Record the machine (MacBook Air M4, CPU, ONNX Runtime version).
 - If INT8 is slower than FP32 on this CPU, report that (it happens on small models).
 
+### Step 5b - Synthetic data arm (optional, only after Steps 1-6 are done; about 2-3 h)
+Goal: generate synthetic images with perfect masks and EVALUATE whether they help on real data.
+- Generator: extend `audit/synth.py` (ellipsoid structure on smooth noisy background) with randomised pose, size, contrast, blur and noise level (domain randomisation). 500 synthetic 3D volumes, sliced the same way as the real data, fixed seed. Save the generator parameters.
+- Three conditions, all tested on the same CLEAN real test cases (200-259), small model (Model A), 3 seeds, logged in MLflow:
+  (i) real only: 20 real training cases, from scratch;
+  (ii) synthetic pretraining on the 500 volumes, then fine-tune on the same 20 real cases;
+  (iii) synthetic only, zero real cases (sim-to-real gap).
+- Also report two simple realism numbers, real vs synthetic: contrast-to-noise ratio inside vs outside the mask, and intensity-histogram distance.
+- Predictions (fix before running): P6: (iii) is clearly worse than (i) because a hippocampus is not an ellipsoid; P7: (ii) beats (i) by more than 1 SD in the 20-case regime (uncertain, may be false). Decision rule: if (ii) does not beat (i), report "synthetic pretraining did not help at this realism level" and do not tune the generator on the test cases.
+- Limits to state: the synthetic shapes are simple and far from real anatomy; this is a sim-to-real test of a toy generator, not realistic image simulation.
+
 ### Step 6 - Report (1-2 h)
 - `run_all.py` reproduces everything from raw data to `results/` and the figure. Commands in README.
 - `results/main_table.csv`: rows = model x rate x filtered(y/n), mean +- SD over 3 seeds. One figure: test Dice vs noise rate, with and without filtering. One table: FP32 vs INT8.
@@ -70,7 +81,7 @@ Create `DESIGN.md`, `README.md`, `results/`, `src/`, `run_all.py`. Pin seeds (nu
 Decision rule: if P1 fails (noise does not hurt), say so and do not continue to interpret filtering as a "recovery"; report it as "this noise at this size did not matter for this model".
 
 ## Outputs the owner needs back (for CV / cover letter)
-A short `RESULTS_FOR_CV.md` with only measured numbers: Dice at each rate with and without filtering for both models; filter recall/precision; FP32 vs INT8 Dice, size, latency; number of runs; seeds; time to run `run_all.py`. Plus one line on what did NOT work.
+A short `RESULTS_FOR_CV.md` with only measured numbers (including Step 5b: Dice for conditions i/ii/iii if it was done): Dice at each rate with and without filtering for both models; filter recall/precision; FP32 vs INT8 Dice, size, latency; number of runs; seeds; time to run `run_all.py`. Plus one line on what did NOT work.
 
 ## Limits to state in the README
 - One small public dataset (MSD Task04 Hippocampus, CC-BY-SA 4.0), 2D slices about 50 x 35 px, method demo only, no clinical claim.
