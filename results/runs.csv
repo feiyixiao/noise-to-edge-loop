@@ -1,0 +1,1 @@
+model,rate,filtered,seed,n_train_cases,n_train_slices,val_dice,test_dice,epochs,train_s,s_per_epoch,split_hash

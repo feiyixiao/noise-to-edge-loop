@@ -1,0 +1,9 @@
+== unet_scratch rate=0.0 filtered=n seed=0 slices=3970
+  ep00 loss 1.178 val_dice 0.7632 30.3s
+  ep01 loss 0.739 val_dice 0.7258 26.6s
+  ep02 loss 0.647 val_dice 0.8118 24.4s
+  ep03 loss 0.257 val_dice 0.7328 26.2s
+  ep04 loss 0.286 val_dice 0.8706 24.8s
+  ep05 loss 0.516 val_dice 0.8751 25.9s
+  ep06 loss 0.147 val_dice 0.8825 26.6s
+  ep07 loss 0.113 val_dice 0.8761 25.8s
