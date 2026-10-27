@@ -1,0 +1,6 @@
+model,rate,filtered,n_seeds,test_mean,test_sd,val_mean,epochs_mean,train_s_mean,n_train_cases
+unet_scratch,0.0,n,1,0.8952,,0.893,29.0,709.9,160
+unet_scratch,0.2,n,1,0.8934,,0.893,30.0,739.3,160
+unet_scratch,0.2,y,1,0.8923,,0.8899,27.0,465.0,128
+unet_scratch,0.4,n,1,0.8903,,0.8885,30.0,658.4,160
+unet_scratch,0.4,y,1,0.8883,,0.881,30.0,305.8,96
