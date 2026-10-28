@@ -33,9 +33,11 @@ def predict(model, X, bs=256):
     return np.concatenate(out)
 
 
-def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print, ckpt=None):
+def fit(name, seed, Xtr, Ytr, Xva, Yva, cva, log=print, ckpt=None, init_state=None):
     C.seed_everything(seed)
     model = build(name)
+    if init_state is not None:
+        model.load_state_dict(init_state)
     opt = torch.optim.Adam(model.parameters(), lr=C.LR)
     n = len(Xtr)
     Xt, Yt = torch.from_numpy(Xtr), torch.from_numpy(Ytr)
