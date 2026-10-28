@@ -339,3 +339,75 @@ Downloading: "https://download.pytorch.org/models/resnet18-f37072fd.pth" to /roo
   ep04 loss 0.288 val_dice 0.8603 15.3s
   ep05 loss 0.215 val_dice 0.8814 15.5s
   ep06 loss 0.312 val_dice 0.8757 16.3s
+  ep07 loss 0.195 val_dice 0.8885 16.7s
+  ep08 loss 0.260 val_dice 0.8832 16.3s
+  ep09 loss 0.271 val_dice 0.8824 15.7s
+  ep10 loss 0.298 val_dice 0.8906 17.0s
+  ep11 loss 0.159 val_dice 0.8909 16.4s
+  ep12 loss 0.255 val_dice 0.8884 17.2s
+  ep13 loss 0.301 val_dice 0.8890 16.0s
+  ep14 loss 0.303 val_dice 0.8832 16.8s
+  ep15 loss 0.274 val_dice 0.8916 16.8s
+  ep16 loss 0.194 val_dice 0.8824 16.6s
+  ep17 loss 0.243 val_dice 0.8810 16.5s
+  ep18 loss 0.244 val_dice 0.8886 16.3s
+  ep19 loss 0.311 val_dice 0.8919 16.2s
+  ep20 loss 0.173 val_dice 0.8942 16.2s
+  ep21 loss 0.162 val_dice 0.8889 15.1s
+  ep22 loss 0.234 val_dice 0.8849 16.4s
+  ep23 loss 0.147 val_dice 0.8830 16.4s
+  ep24 loss 0.195 val_dice 0.8871 15.9s
+  ep25 loss 0.203 val_dice 0.8955 15.9s
+  ep26 loss 0.176 val_dice 0.8924 16.7s
+  ep27 loss 0.183 val_dice 0.8891 15.6s
+  ep28 loss 0.193 val_dice 0.8828 15.2s
+  ep29 loss 0.241 val_dice 0.8939 14.5s
+== unet_scratch rate=0.4 filtered=n seed=1 slices=4061
+  ep00 loss 1.046 val_dice 0.7842 15.2s
+  ep01 loss 0.708 val_dice 0.8127 15.4s
+  ep02 loss 0.536 val_dice 0.8586 15.3s
+  ep03 loss 0.356 val_dice 0.8506 15.3s
+  ep04 loss 0.339 val_dice 0.8700 15.6s
+  ep05 loss 0.281 val_dice 0.8624 16.4s
+  ep06 loss 0.268 val_dice 0.8714 15.7s
+  ep07 loss 0.261 val_dice 0.8749 16.4s
+  ep08 loss 0.267 val_dice 0.8686 16.1s
+  ep09 loss 0.225 val_dice 0.8768 16.2s
+  ep10 loss 0.227 val_dice 0.8816 15.9s
+  ep11 loss 0.237 val_dice 0.8837 15.8s
+  ep12 loss 0.315 val_dice 0.8855 15.8s
+  ep13 loss 0.256 val_dice 0.8843 15.6s
+  ep14 loss 0.240 val_dice 0.8862 16.2s
+  ep15 loss 0.243 val_dice 0.8825 16.2s
+  ep16 loss 0.179 val_dice 0.8919 16.7s
+  ep17 loss 0.281 val_dice 0.8853 16.1s
+  ep18 loss 0.266 val_dice 0.8806 15.9s
+  ep19 loss 0.243 val_dice 0.8836 16.8s
+  ep20 loss 0.244 val_dice 0.8848 17.1s
+  ep21 loss 0.216 val_dice 0.8833 16.6s
+  ep22 loss 0.260 val_dice 0.8626 16.1s
+  ep23 loss 0.269 val_dice 0.8700 15.9s
+  ep24 loss 0.315 val_dice 0.8892 15.7s
+== unet_scratch rate=0.2 filtered=y seed=1 slices=3199
+  ep00 loss 1.103 val_dice 0.6927 12.5s
+  ep01 loss 0.822 val_dice 0.8011 12.8s
+  ep02 loss 0.585 val_dice 0.8163 13.2s
+  ep03 loss 0.344 val_dice 0.7783 12.7s
+  ep04 loss 0.280 val_dice 0.8199 12.5s
+  ep05 loss 0.230 val_dice 0.8741 12.9s
+  ep06 loss 0.232 val_dice 0.8808 13.1s
+  ep07 loss 0.220 val_dice 0.8757 12.5s
+  ep08 loss 0.193 val_dice 0.8873 13.0s
+  ep09 loss 0.233 val_dice 0.8884 12.7s
+  ep10 loss 0.208 val_dice 0.8899 12.3s
+  ep11 loss 0.200 val_dice 0.8840 12.8s
+  ep12 loss 0.204 val_dice 0.8922 12.9s
+  ep13 loss 0.271 val_dice 0.8822 13.2s
+  ep14 loss 0.189 val_dice 0.8826 12.3s
+  ep15 loss 0.211 val_dice 0.8863 12.8s
+  ep16 loss 0.154 val_dice 0.8873 12.5s
+  ep17 loss 0.173 val_dice 0.8554 12.4s
+  ep18 loss 0.229 val_dice 0.8841 12.1s
+  ep19 loss 0.140 val_dice 0.8820 12.1s
+  ep20 loss 0.154 val_dice 0.8852 12.4s
+== unet_scratch rate=0.4 filtered=y seed=1 slices=2433
