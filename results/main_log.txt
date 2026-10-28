@@ -825,3 +825,28 @@ Downloading: "https://download.pytorch.org/models/resnet18-f37072fd.pth" to /roo
   ep02 loss 0.401 val_dice 0.7802 21.9s
   ep03 loss 0.263 val_dice 0.8199 23.0s
   ep04 loss 0.214 val_dice 0.8525 23.4s
+  ep05 loss 0.162 val_dice 0.8439 23.6s
+  ep06 loss 0.120 val_dice 0.8703 24.1s
+  ep07 loss 0.322 val_dice 0.8606 25.1s
+  ep08 loss 0.139 val_dice 0.8583 24.0s
+  ep09 loss 0.737 val_dice 0.8468 23.5s
+  ep10 loss 0.201 val_dice 0.8729 24.6s
+  ep11 loss 0.107 val_dice 0.8671 24.1s
+  ep12 loss 0.165 val_dice 0.8773 23.4s
+  ep13 loss 0.107 val_dice 0.8639 25.1s
+  ep14 loss 0.208 val_dice 0.8623 24.1s
+  ep15 loss 0.197 val_dice 0.8791 23.6s
+  ep16 loss 0.715 val_dice 0.8826 23.4s
+  ep17 loss 0.177 val_dice 0.8820 24.7s
+  ep18 loss 0.149 val_dice 0.8751 23.6s
+  ep19 loss 0.115 val_dice 0.8764 24.7s
+  ep20 loss 0.121 val_dice 0.8699 23.3s
+  ep21 loss 0.298 val_dice 0.8843 23.5s
+  ep22 loss 0.148 val_dice 0.8775 23.4s
+  ep23 loss 0.132 val_dice 0.8759 24.2s
+  ep24 loss 0.140 val_dice 0.8776 22.6s
+  ep25 loss 0.216 val_dice 0.8640 23.0s
+  ep26 loss 0.205 val_dice 0.8728 23.2s
+  ep27 loss 0.139 val_dice 0.8790 22.8s
+  ep28 loss 0.096 val_dice 0.8716 23.0s
+  ep29 loss 0.132 val_dice 0.8790 23.0s

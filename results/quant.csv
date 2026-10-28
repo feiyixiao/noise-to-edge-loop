@@ -1,3 +1,5 @@
 model,precision,quant_mode,test_dice,size_mb,median_ms,p95_ms,onnx_vs_torch_max_abs_diff,hardware,cpu,ort,threads,n_calib,n_test_slices
-unet_scratch,fp32,,0.8952,1.934,2.196,2.358,1.71e-05,4-core cloud CPU,x86_64,1.29.0,1,100,1501
-unet_scratch,int8,static_QDQ,0.8952,0.526,1.194,1.411,,4-core cloud CPU,x86_64,1.29.0,1,100,1501
+unet_scratch,fp32,,0.8952,1.934,2.581,3.497,1.71e-05,4-core cloud CPU,x86_64,1.29.0,1,100,1501
+unet_scratch,int8,static_QDQ,0.8952,0.526,1.181,1.395,,4-core cloud CPU,x86_64,1.29.0,1,100,1501
+unet_resnet18,fp32,,0.8912,57.281,6.071,7.015,3.43e-05,4-core cloud CPU,x86_64,1.29.0,1,100,1501
+unet_resnet18,int8,static_QDQ,0.8779,14.474,2.102,3.024,,4-core cloud CPU,x86_64,1.29.0,1,100,1501
