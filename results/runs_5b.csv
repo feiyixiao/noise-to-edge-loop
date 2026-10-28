@@ -1,0 +1,10 @@
+condition,seed,n_real_train_cases,n_train_slices,val_dice,test_dice,epochs,train_s
+i_real_only,0,20,496,0.8536,0.8507,30,192.3
+iii_synthetic_only,0,0,7577,0.3448,0.3321,19,725.8
+ii_pretrain_finetune,0,20,496,0.8531,0.8652,30,162.5
+i_real_only,1,20,496,0.8561,0.8567,30,169.8
+iii_synthetic_only,1,0,7577,0.3656,0.3483,16,641.1
+ii_pretrain_finetune,1,20,496,0.8612,0.8740,30,150.1
+i_real_only,2,20,496,0.8531,0.8630,30,161.1
+iii_synthetic_only,2,0,7577,0.3678,0.3483,17,638.1
+ii_pretrain_finetune,2,20,496,0.8570,0.8627,30,159.2

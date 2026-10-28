@@ -1,0 +1,4 @@
+condition,n,mean,sd
+i_real_only,3,0.8568,0.0062
+ii_pretrain_finetune,3,0.8673,0.0059
+iii_synthetic_only,3,0.3429,0.0094

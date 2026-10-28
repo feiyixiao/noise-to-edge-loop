@@ -22,6 +22,12 @@ Dice = mean over cases of the Dice pooled over that case's slices, using slices 
 
 ![Dice vs noise](results/dice_vs_noise.png)
 
+## Step 5b: synthetic data arm (optional)
+Does domain-randomised synthetic data help a small real-data model? 500 synthetic ellipsoid volumes (random pose, size, contrast, blur, noise), Model A, 3 seeds, tested on clean real cases 200-259.
+- (i) 20 real cases only: 0.8568 ± 0.0062; (ii) synthetic pretraining then fine-tune on the same 20 cases: 0.8673 ± 0.0059; (iii) synthetic only, no real case: 0.3429 ± 0.0094.
+- (ii) beat (i) by 0.0105 on average (more than 1 SD), but not in every seed (+0.0145, +0.0173, -0.0003) and the validation gap was only 0.0028, so this is a weak positive. (iii) shows a large sim-to-real gap: the toy ellipsoids are not a hippocampus (contrast-to-noise 2.41 vs 0.55 for real data; histogram distance 0.066).
+- P6 held; P7 met by the ">1 SD" rule on the mean but weakly. One generator configuration, not tuned on test. Toy generator, not realistic image simulation.
+
 ## Predictions (DESIGN.md) vs outcome
 - P1 (rate 0.4 lower than rate 0, by more than 1 SD): held for both models, ResNet18 only marginally (drop 0.0056 vs SD 0.0042 at rate 0).
 - P2 (pretrained encoder loses less from noise): not supported (0.0056 vs 0.0052 loss).
@@ -43,10 +49,11 @@ At this noise size (Dice 0.8 on 20-40% of train cases) and this dataset, the sma
 - During the run the cloud container restarted several times; training resumed from per-epoch checkpoints (same RNG stream). The interrupted logs are in `results/main_log_interrupted_*.txt`.
 
 ## Files
-`DESIGN.md` (design, predictions, deviation log), `config.py`, `src/` (data, noise, models, train, run_main, quant, report), `audit/` (existing audit code, unchanged), `watchdog.sh`, `run_all.py`, `results/` (runs.csv, noise_manifest.csv, filter_stats.csv, main_table.csv, quant.csv, dice_vs_noise.png, logs), `RESULTS_FOR_CV.md`.
+`DESIGN.md` (design, predictions, deviation log), `config.py`, `src/` (data, noise, models, train, run_main, quant, report), `audit/` (existing audit code, unchanged), `watchdog.sh`, `run_all.py`, `src/synth_dr.py`, `src/run_5b.py`, `watchdog_5b.sh`, `results/` (runs_5b.csv, summary_5b.csv, synth_params.csv, synth_realism.csv, runs.csv, noise_manifest.csv, filter_stats.csv, main_table.csv, quant.csv, dice_vs_noise.png, logs), `RESULTS_FOR_CV.md`.
 
 ## Reproduce
 ```
 pip install torch torchvision onnx onnxruntime mlflow nibabel scipy pandas matplotlib
+python -m src.run_5b       # optional Step 5b (synthetic arm), resumable
 python run_all.py          # noise manifest + 30 runs + filter stats + quantization + table/figure; resumable
 ```

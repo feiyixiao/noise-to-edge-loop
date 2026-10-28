@@ -1,0 +1,3 @@
+quantity,real_train_mean,real_train_sd,synthetic_mean,synthetic_sd
+CNR_inside_vs_outside_mask,0.5524,0.0942,2.4107,1.4832
+intensity_wasserstein_distance_real_vs_synthetic,0.0657,,,
