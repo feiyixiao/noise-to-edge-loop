@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="zh-CN"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise-to-Edge Loop 中文版</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="从损坏的 MRI 标签到 INT8 分割模型的实测流水线介绍">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=Noto+Sans+SC:wght@400;500;700&display=swap">
+<style>
+:root{
+  /* Concept: a lab report laid out as 16:9 plates. Cool paper, ink navy, one signal blue; amber marks what did not work. */
+  --paper:#EEF1F5; --card:#FFFFFF; --ink:#0D1829; --muted:#556377; --line:#D3DAE4;
+  --accent:#2447F5; --accent-soft:#E3E9FF; --good:#0B7A66; --warn:#B5500F; --warn-soft:#FBEBDD; --good-soft:#DDF3EC;
+  --f-display:"Bricolage Grotesque","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --f-body:"IBM Plex Sans","Noto Sans SC","PingFang SC","Microsoft YaHei",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#080E19; --card:#111A2B; --ink:#E9EFF8; --muted:#94A3B8; --line:#233248;
+  --accent:#7C98FF; --accent-soft:#18244A; --good:#3FD3AE; --warn:#F3A163; --warn-soft:#3A2414; --good-soft:#10332B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#080E19; --card:#111A2B; --ink:#E9EFF8; --muted:#94A3B8; --line:#233248;
+  --accent:#7C98FF; --accent-soft:#18244A; --good:#3FD3AE; --warn:#F3A163; --warn-soft:#3A2414; --good-soft:#10332B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.65;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.deck{display:flex;flex-direction:column;align-items:center;gap:24px}
+.slide{width:min(100%,1280px);aspect-ratio:16/9;background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:48px 64px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden}
+.slide>*{min-width:0}
+.eyebrow{font:500 13px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:54px;line-height:1.1;font-weight:700}
+h2{font-size:36px;line-height:1.25;font-weight:700;max-width:30em}
+h3{font-size:22px;font-weight:600}
+p{margin:0;max-width:44em}
+.lead{font-size:21px;color:var(--ink)} .small{font-size:14.5px;color:var(--muted)} .muted{color:var(--muted)}
+.foot{position:absolute;left:64px;right:64px;bottom:20px;display:flex;justify-content:space-between;font:400 11.5px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+.row{display:flex;gap:40px;flex:1;min-height:0}.row>*{min-width:0}
+.col{display:flex;flex-direction:column;gap:14px;flex:1}
+.good{color:var(--good)} .warn{color:var(--warn)} .accent-t{color:var(--accent)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:auto;border-top:2px solid var(--ink)}
+.st{padding:16px 18px 0 0;position:relative}
+.st:before{content:"";position:absolute;top:-7px;left:0;width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.st b{display:block;font:600 16px var(--f-display);margin:10px 0 6px}
+.st span{font-size:14px;color:var(--muted);display:block}
+.st .n{font:600 24px var(--f-display);color:var(--ink);margin-top:8px}
+/* chart */
+.charts{display:flex;gap:24px;flex:1;min-height:0}.charts>div{flex:1;min-width:0}
+.charts h3{font-size:17px;margin-bottom:2px}
+svg{width:100%;height:auto;display:block;max-height:100%}
+.grid{stroke:var(--line);stroke-width:1}.tick{font:400 12px var(--f-mono);fill:var(--muted)}.axis{font:400 12px var(--f-body);fill:var(--muted)}
+.line{fill:none;stroke-width:2.6}.line.ink{stroke:var(--ink)}.line.accent{stroke:var(--accent)}
+.err{stroke-width:1.6}.err.ink{stroke:var(--ink)}.err.accent{stroke:var(--accent)}
+.dot.ink{fill:var(--ink)}.dot.accent{fill:var(--accent)}
+.val{font:600 12.5px var(--f-mono)}.val.ink{fill:var(--ink)}.val.accent{fill:var(--accent)}
+.legend{display:flex;gap:22px;font-size:14px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:26px;height:0;border-top:3px solid var(--ink);vertical-align:middle;margin-right:8px}
+.legend i.f{border-top:3px dashed var(--accent)}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 18px;font-size:18px;border-radius:0 4px 4px 0}
+.callout.w{border-left-color:var(--warn);background:var(--warn-soft)}
+/* recall bars */
+.rb-group{margin-bottom:14px}.rb-head{font:500 13px var(--f-mono);color:var(--muted);margin-bottom:6px}
+.rb{display:grid;grid-template-columns:104px 1fr 48px;gap:10px;align-items:center;font-size:15px;margin:4px 0}
+.rb-track,.lb-track{height:14px;background:var(--line);border-radius:2px;display:block}
+.rb-fill,.lb-fill{display:block;height:100%;border-radius:2px}
+.rb-fill.good{background:var(--good)}.rb-fill.warn{background:var(--warn)}
+.rb-val{font:600 14px var(--f-mono);text-align:right}
+.big{font:700 72px/1 var(--f-display);letter-spacing:-.02em}
+.kv{display:flex;flex-direction:column;gap:4px}
+/* quant cards */
+.qcards{display:flex;gap:28px;min-height:0}.qcard{flex:1;border:1px solid var(--line);border-radius:6px;padding:18px 26px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.qrow{display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:8px;font-size:16px}
+.qrow b{font:600 17px var(--f-mono)} .qrow em{font:600 15px var(--f-body);font-style:normal}
+.qrow span{color:var(--muted);font-size:14.5px}
+.lb{display:grid;grid-template-columns:48px 1fr 78px;gap:10px;align-items:center;font-size:13.5px;margin:3px 0}
+.lb-fill.ink{background:var(--ink)}.lb-fill.accent{background:var(--accent)}.lb b{font:600 13px var(--f-mono);text-align:right}
+/* 5b bars */
+.hb{margin-bottom:14px}.hb-lab{font-size:16px;margin-bottom:5px}
+.hb-track{height:22px;background:var(--line);border-radius:2px}.hb-fill{height:100%;border-radius:2px}
+.hb-fill.ink{background:var(--ink)}.hb-fill.accent{background:var(--accent)}.hb-fill.warn{background:var(--warn)}
+.hb-val{font:600 20px var(--f-mono);margin-top:4px}.hb-val small{font:400 14px var(--f-mono);color:var(--muted)}
+/* table */
+table{border-collapse:collapse;width:100%;font-size:15.5px}
+th{font:500 12px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:2px solid var(--ink)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.id{font:600 14px var(--f-mono);white-space:nowrap}
+.tag{display:inline-block;font:600 12px var(--f-mono);padding:3px 8px;border-radius:3px;white-space:nowrap}
+.tag.good{background:var(--good-soft);color:var(--good)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.mid{background:var(--accent-soft);color:var(--accent)}
+ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.scroll{overflow-x:auto;min-width:0}
+.callout ul{margin:8px 0 0;padding-left:22px;display:flex;flex-direction:column;gap:6px}.callout p{max-width:none}
+.who{font:500 13px var(--f-mono);color:var(--muted)}
+/* narrow screens */
+@media (max-width:860px){
+  body{font-size:16px}
+  .slide{aspect-ratio:auto;padding:28px 20px 44px}
+  h1{font-size:36px} h2{font-size:28px}
+  .row,.charts,.qcards{flex-direction:column}
+  .pipe{grid-template-columns:1fr;border-top:0;border-left:2px solid var(--ink);gap:16px;padding-left:16px}
+  .st:before{top:4px;left:-23px}.st{padding:0}
+  .foot{left:20px;right:20px}
+}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  body{padding:0;background:var(--card);font-size:17px}
+  .deck{gap:0;display:block}
+  .slide{width:1280px;height:720px;aspect-ratio:auto;border:0;border-radius:0;page-break-after:always;break-after:page;break-inside:avoid;padding:48px 64px}
+}
+</style>
+</head><body>
+<main class="deck">
+<section class="slide">
+<div class="eyebrow">项目介绍</div>
+<h1>训练数据画错了，AI 还能用吗？</h1>
+<p class="lead">我用公开的脑部 MRI 数据做了一个小实验，回答三个问题：训练用的标注出错，会让模型差多少？能不能让程序自动把错的挑出来？把模型压缩到小设备也能跑，要付出什么代价？</p>
+<div class="callout"><b>先说结论</b>
+<ul>
+<li>就算 40% 的标注被故意画错，模型的准确度也只掉了约 0.5 个百分点。</li>
+<li>自动检查能抓出大部分画错的，但把它们删掉再训练，模型没有变好。</li>
+<li>压缩之后，小模型准确度没变，文件小 3.7 倍，处理速度快 2.2 倍。大模型快 2.9 倍，但准确度掉了 1.3 个百分点。</li></ul></div>
+<div class="pipe">
+<div class="st"><b>故意画错一部分标注</b><span>三种常见的错法</span><div class="n">0 / 20 / 40%</div></div>
+<div class="st"><b>训练模型</b><span>2 种小模型，各训练 3 次</span><div class="n">共 30 次</div></div>
+<div class="st"><b>自动检查标注</b><span>把可疑的挑出来删掉</span><div class="n">抓到 53 / 64</div></div>
+<div class="st"><b>删掉后再训练一次</b><span>看有没有变好</span><div class="n">没有变好</div></div>
+<div class="st"><b>压缩模型</b><span>比较大小和速度</span><div class="n">小 3.7 倍</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>1/8</span></div></section><section class="slide">
+<div class="eyebrow">为什么做这个</div>
+<h2>真实项目里，标注总会有错，而且模型最后要装进算力很小的设备。</h2>
+<div class="row">
+<div class="col"><h3>一个医学影像项目的日常</h3>
+<ul class="clean lead">
+<li>AI 要学会在 MRI 里把某个器官圈出来，老师是医生手工画的轮廓，这叫标注。</li>
+<li>人画多了就会出错：画大了、画歪了、手滑多画了一块。</li>
+<li>训练好的模型还要装进算力有限的设备里，得先压缩。</li></ul></div>
+<div class="col"><h3>所以我想知道</h3>
+<ul class="clean lead">
+<li>标注错一部分，模型会差多少？</li>
+<li>有没有办法自动挑出画错的？挑出来删掉有用吗？</li>
+<li>压缩模型，准确度和速度各变多少？</li></ul>
+<p class="small">我把这三件事放在同一条流水线上，一次测完。</p></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>2/8</span></div></section><section class="slide">
+<div class="eyebrow">我是怎么做的</div>
+<h2>用公开数据，故意把标注画错，再看后果。</h2>
+<div class="row">
+<div class="col">
+<h3>四步</h3>
+<ul class="clean">
+<li><b>造脏数据。</b>用公开的海马体 MRI 数据（260 个病例），把其中 20% 或 40% 的标注故意画错：画大或画小、整体偏移、多画一块。</li>
+<li><b>训练。</b>用脏数据训练两种小模型，每种、每个比例都训练 3 次，一共 30 次。</li>
+<li><b>自动检查。</b>用一个已有的检查程序给每个标注打分，把最可疑的那部分删掉，再训练一遍。</li>
+<li><b>压缩。</b>把模型压成更小的数字格式，在普通 CPU 上比较大小和速度。</li></ul></div>
+<div class="col">
+<h3>怎么打分</h3>
+<p>用“重合度”：模型画出的轮廓和医生画的轮廓重合多少。1 表示完全一样。本项目里的模型大约在 0.89，也就是约 89% 重合。</p>
+<h3>怎么保证公平</h3>
+<ul class="clean">
+<li>测试用的 60 个病例从不参与训练，标注始终是对的。</li>
+<li>按病例分开，同一个人的图不会同时出现在训练和测试里。</li>
+<li>跑之前先写下 7 条预测，结果不好看也照实写。</li></ul></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>3/8</span></div></section><section class="slide">
+<div class="eyebrow">发现 1 · 标注出错的影响</div>
+<h2>标注画错 40%，模型只差了约半个百分点。</h2>
+<div class="charts">
+<div><h3>从零训练的小模型</h3><svg viewBox="0 0 560 330" role="img" aria-label="从零训练的小模型: 重合度与标注出错比例">
+<text x="62" y="14" class="axis">重合度（越高越好）</text>
+<line x1="62" x2="536" y1="216.5" y2="216.5" class="grid"/>
+<text x="52" y="220.5" class="tick" text-anchor="end">0.885</text>
+<line x1="62" x2="536" y1="166.9" y2="166.9" class="grid"/>
+<text x="52" y="170.9" class="tick" text-anchor="end">0.890</text>
+<line x1="62" x2="536" y1="117.3" y2="117.3" class="grid"/>
+<text x="52" y="121.3" class="tick" text-anchor="end">0.895</text>
+<line x1="62" x2="536" y1="67.7" y2="67.7" class="grid"/>
+<text x="52" y="71.7" class="tick" text-anchor="end">0.900</text>
+<text x="62.0" y="300" class="tick" text-anchor="middle">0%</text>
+<text x="299.0" y="300" class="tick" text-anchor="middle">20%</text>
+<text x="536.0" y="300" class="tick" text-anchor="middle">40%</text>
+<text x="299.0" y="322" class="axis" text-anchor="middle">训练数据里被故意画错的比例</text>
+<polyline points="62.0,92.5 299.0,123.2 536.0,144.1" class="line ink" stroke-dasharray=""/>
+<line x1="62.0" x2="62.0" y1="117.3" y2="67.7" class="err ink"/>
+<circle cx="62.0" cy="92.5" r="5" class="dot ink"/>
+<text x="62.0" y="59.7" class="val ink" text-anchor="middle">0.8975</text>
+<line x1="299.0" x2="299.0" y1="138.1" y2="108.4" class="err ink"/>
+<circle cx="299.0" cy="123.2" r="5" class="dot ink"/>
+<text x="299.0" y="100.4" class="val ink" text-anchor="middle">0.8944</text>
+<line x1="536.0" x2="536.0" y1="161.9" y2="126.2" class="err ink"/>
+<circle cx="536.0" cy="144.1" r="5" class="dot ink"/>
+<text x="536.0" y="118.2" class="val ink" text-anchor="middle">0.8923</text>
+<polyline points="62.0,92.5 299.0,147.0 536.0,211.5" class="line accent" stroke-dasharray="6 5"/>
+<line x1="62.0" x2="62.0" y1="117.3" y2="67.7" class="err accent"/>
+<circle cx="62.0" cy="92.5" r="5" class="dot accent"/>
+<line x1="299.0" x2="299.0" y1="166.9" y2="127.2" class="err accent"/>
+<circle cx="299.0" cy="147.0" r="5" class="dot accent"/>
+<text x="299.0" y="183.9" class="val accent" text-anchor="middle">0.8920</text>
+<line x1="536.0" x2="536.0" y1="239.3" y2="183.7" class="err accent"/>
+<circle cx="536.0" cy="211.5" r="5" class="dot accent"/>
+<text x="536.0" y="256.3" class="val accent" text-anchor="middle">0.8855</text>
+</svg></div>
+<div><h3>用预训练编码器的模型</h3><svg viewBox="0 0 560 330" role="img" aria-label="用预训练编码器的模型: 重合度与标注出错比例">
+<text x="62" y="14" class="axis">重合度（越高越好）</text>
+<line x1="62" x2="536" y1="216.5" y2="216.5" class="grid"/>
+<text x="52" y="220.5" class="tick" text-anchor="end">0.885</text>
+<line x1="62" x2="536" y1="166.9" y2="166.9" class="grid"/>
+<text x="52" y="170.9" class="tick" text-anchor="end">0.890</text>
+<line x1="62" x2="536" y1="117.3" y2="117.3" class="grid"/>
+<text x="52" y="121.3" class="tick" text-anchor="end">0.895</text>
+<line x1="62" x2="536" y1="67.7" y2="67.7" class="grid"/>
+<text x="52" y="71.7" class="tick" text-anchor="end">0.900</text>
+<text x="62.0" y="300" class="tick" text-anchor="middle">0%</text>
+<text x="299.0" y="300" class="tick" text-anchor="middle">20%</text>
+<text x="536.0" y="300" class="tick" text-anchor="middle">40%</text>
+<text x="299.0" y="322" class="axis" text-anchor="middle">训练数据里被故意画错的比例</text>
+<polyline points="62.0,107.4 299.0,158.9 536.0,162.9" class="line ink" stroke-dasharray=""/>
+<line x1="62.0" x2="62.0" y1="149.0" y2="65.7" class="err ink"/>
+<circle cx="62.0" cy="107.4" r="5" class="dot ink"/>
+<text x="62.0" y="57.7" class="val ink" text-anchor="middle">0.8960</text>
+<line x1="299.0" x2="299.0" y1="185.7" y2="132.2" class="err ink"/>
+<circle cx="299.0" cy="158.9" r="5" class="dot ink"/>
+<text x="299.0" y="124.2" class="val ink" text-anchor="middle">0.8908</text>
+<line x1="536.0" x2="536.0" y1="186.7" y2="139.1" class="err ink"/>
+<circle cx="536.0" cy="162.9" r="5" class="dot ink"/>
+<text x="536.0" y="131.1" class="val ink" text-anchor="middle">0.8904</text>
+<polyline points="62.0,107.4 299.0,140.1 536.0,181.8" class="line accent" stroke-dasharray="6 5"/>
+<line x1="62.0" x2="62.0" y1="149.0" y2="65.7" class="err accent"/>
+<circle cx="62.0" cy="107.4" r="5" class="dot accent"/>
+<line x1="299.0" x2="299.0" y1="162.9" y2="117.3" class="err accent"/>
+<circle cx="299.0" cy="140.1" r="5" class="dot accent"/>
+<text x="299.0" y="179.9" class="val accent" text-anchor="middle">0.8927</text>
+<line x1="536.0" x2="536.0" y1="189.7" y2="173.8" class="err accent"/>
+<circle cx="536.0" cy="181.8" r="5" class="dot accent"/>
+<text x="536.0" y="206.7" class="val accent" text-anchor="middle">0.8885</text>
+</svg></div>
+</div>
+<div class="legend"><span><i></i>不处理</span><span><i class="f"></i>自动删掉可疑标注后</span><span>每种情况训练 3 次取平均，竖线是 3 次之间的波动</span></div>
+<div class="callout">小模型的重合度从 0.8975 降到 0.8923，另一个模型也只降了 0.0056。这点差别和重复训练的随机波动差不多大。<b>这个程度的标注错误，对这个任务影响不大。</b></div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>4/8</span></div></section><section class="slide">
+<div class="eyebrow">发现 2 · 自动检查</div>
+<h2>自动检查能抓出大部分画错的，但删掉它们，模型没有变好。</h2>
+<div class="row">
+<div class="col"><h3>画错的标注，被抓到了多少</h3><div class="rb-group"><div class="rb-head">画错 20% 的病例（共 32 个）</div><div class="rb"><span class="rb-lab">多画了一块</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">画大或画小</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">整体偏移</span><span class="rb-track"><span class="rb-fill warn" style="width:53%"></span></span><span class="rb-val">53%</span></div></div><div class="rb-group"><div class="rb-head">画错 40% 的病例（共 64 个）</div><div class="rb"><span class="rb-lab">多画了一块</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">画大或画小</span><span class="rb-track"><span class="rb-fill good" style="width:89%"></span></span><span class="rb-val">89%</span></div><div class="rb"><span class="rb-lab">整体偏移</span><span class="rb-track"><span class="rb-fill warn" style="width:61%"></span></span><span class="rb-val">61%</span></div></div>
+<p class="small">合计：画错 20% 时抓到 24 / 32，画错 40% 时抓到 53 / 64。整体偏移的最难发现。</p></div>
+<div class="col"><h3>删掉可疑标注后再训练，结果怎么样</h3>
+<ul class="clean lead">
+<li>小模型：反而差了一点（少 0.0024 和 0.0068）。</li>
+<li>另一个模型：一次好一点（多 0.0019），一次差一点（少 0.0019）。</li></ul>
+<div class="callout w"><b>为什么没用：</b>删掉 20% 到 40% 的病例，模型就少学了这么多数据，损失和标注画错造成的损失差不多大。而且这个噪声本来就没造成多大伤害，没有多少可挽回的。</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>5/8</span></div></section><section class="slide">
+<div class="eyebrow">发现 3 · 压缩模型</div>
+<h2>压缩后，小模型一点没变差；大模型快了很多，但准确度掉了一点。</h2>
+<div class="qcards">
+<div class="qcard">
+<h3>从零训练的小模型</h3>
+<div class="qrow"><span>准确度（重合度）</span><b>0.8952 → 0.8952</b><em class="good">几乎没变</em></div>
+<div class="qrow"><span>模型文件大小</span><b>1.93 → 0.53 MB</b><em class="good">小 3.7 倍</em></div>
+<div class="qrow"><span>处理一张图的时间</span><b>2.58 → 1.18 ms</b><em class="good">快 2.2 倍</em></div>
+<div class="lat"><div class="lb"><span>压缩前</span><span class="lb-track"><span class="lb-fill ink" style="width:43%"></span></span><b>2.58 ms</b></div><div class="lb"><span>压缩后</span><span class="lb-track"><span class="lb-fill accent" style="width:19%"></span></span><b>1.18 ms</b></div></div>
+<p class="small">压缩前后，准确度到小数点后四位都一样。</p></div>
+<div class="qcard">
+<h3>用预训练编码器的大模型</h3>
+<div class="qrow"><span>准确度（重合度）</span><b>0.8912 → 0.8779</b><em class="warn">下降 0.0133</em></div>
+<div class="qrow"><span>模型文件大小</span><b>57.28 → 14.47 MB</b><em class="good">小 4.0 倍</em></div>
+<div class="qrow"><span>处理一张图的时间</span><b>6.07 → 2.10 ms</b><em class="good">快 2.9 倍</em></div>
+<div class="lat"><div class="lb"><span>压缩前</span><span class="lb-track"><span class="lb-fill ink" style="width:100%"></span></span><b>6.07 ms</b></div><div class="lb"><span>压缩后</span><span class="lb-track"><span class="lb-fill accent" style="width:35%"></span></span><b>2.10 ms</b></div></div>
+<p class="small">体积和速度的收益更大，准确度掉了约 1.3 个百分点。</p></div>
+</div>
+<div class="callout">大模型掉的这 1.3 个百分点，上线前要查清原因。可以试更好的校准数据，或者在压缩时一起训练。这两种这次都没有试。</div>
+<p class="small">测速环境：4 核云端 CPU，单线程，每次处理 1 张图，共 1501 张测试图。这不是真正的嵌入式设备，也不是笔记本。</p>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>6/8</span></div></section><section class="slide">
+<div class="eyebrow">额外实验 · 电脑合成的假图</div>
+<h2>电脑画的假图能帮上忙吗？只能算勉强有一点。</h2>
+<div class="row">
+<div class="col"><h3>在真实的测试病例上，准确度（重合度）是多少</h3><div class="hb"><div class="hb-lab">只用 20 个真实病例</div><div class="hb-track"><div class="hb-fill ink" style="width:85.7%"></div></div><div class="hb-val">0.8568<small> ± 0.0062</small></div></div><div class="hb"><div class="hb-lab">先用电脑合成的假图预热，再学同样的 20 个真实病例</div><div class="hb-track"><div class="hb-fill accent" style="width:86.7%"></div></div><div class="hb-val">0.8673<small> ± 0.0059</small></div></div><div class="hb"><div class="hb-lab">只用假图，一个真实病例都不给</div><div class="hb-track"><div class="hb-fill warn" style="width:34.3%"></div></div><div class="hb-val">0.3429<small> ± 0.0094</small></div></div></div>
+<div class="col"><h3>怎么理解</h3>
+<p>我让电脑生成了 500 个“假脑”：随机朝向、大小、明暗的椭球体，每个都自带完美标注。</p>
+<p>只用假图几乎学不会，因为假图比真实 MRI 清楚得多：目标和背景的反差是 <b>2.41</b>，真实图只有 <b>0.55</b>。</p>
+<div class="callout">先用假图预热、再学 20 个真实病例，平均比只学真实病例好 0.0105。但 3 次里只有 2 次更好，所以只能算“可能有一点用”。</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>7/8</span></div></section><section class="slide">
+<div class="eyebrow">我的预测对了几个</div>
+<h2>跑之前写下 7 条预测：2 条对，2 条错，3 条部分对。</h2>
+<div class="scroll"><table>
+<tr><th>#</th><th>我当时预测</th><th>实际结果</th></tr>
+<tr><td class="id">1</td><td>标注画错 40%，模型会变差</td><td><span class="tag good">对</span> 确实变差了，但只差 0.0052 和 0.0056</td></tr>
+<tr><td class="id">2</td><td>预训练的模型更抗标注错误</td><td><span class="tag warn">错</span> 没有更抗：0.0056 对 0.0052</td></tr>
+<tr><td class="id">3</td><td>删掉可疑标注能找回一部分损失，而且会漏掉不少</td><td><span class="tag warn">错</span> 没有找回；40% 时抓到了 83%，比我预想的高</td></tr>
+<tr><td class="id">4</td><td>压缩后准确度掉得不到 0.01</td><td><span class="tag mid">部分对</span> 小模型没掉，大模型掉了 0.0133</td></tr>
+<tr><td class="id">5</td><td>文件小 3 到 4 倍，速度提升不确定</td><td><span class="tag mid">部分对</span> 体积对；两个模型都变快了，我原以为小模型不会变快</td></tr>
+<tr><td class="id">6</td><td>只用假图，明显不如只用真图</td><td><span class="tag good">对</span> 0.3429 对 0.8568</td></tr>
+<tr><td class="id">7</td><td>假图预热再学真图，比只学真图好</td><td><span class="tag mid">部分对</span> 平均好 0.0105，但 3 次里只有 2 次</td></tr>
+</table></div>
+<p class="small"><b>这个实验的局限：</b>只用了一个小型公开数据集，图很小（约 50×35 像素），不做任何临床结论。标注错误是我人为制造的，不一定像真实医生之间的分歧。只切分了一次数据。压缩的测试每种模型只用了 1 个，且在云端 CPU 上测，没有做嵌入式设备测试。</p>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>8/8</span></div></section>
+</main>
+</body></html>

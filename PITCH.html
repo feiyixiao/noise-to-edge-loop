@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Noise-to-Edge Loop</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Pitch for a measured pipeline from damaged MRI labels to an INT8 segmentation model">
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,600;12..96,700&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  /* Concept: a lab report laid out as 16:9 plates. Cool paper, ink navy, one signal blue; amber marks what did not work. */
+  --paper:#EEF1F5; --card:#FFFFFF; --ink:#0D1829; --muted:#556377; --line:#D3DAE4;
+  --accent:#2447F5; --accent-soft:#E3E9FF; --good:#0B7A66; --warn:#B5500F; --warn-soft:#FBEBDD; --good-soft:#DDF3EC;
+  --f-display:"Bricolage Grotesque","Helvetica Neue",Arial,sans-serif;
+  --f-body:"IBM Plex Sans","Helvetica Neue",Arial,sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --paper:#080E19; --card:#111A2B; --ink:#E9EFF8; --muted:#94A3B8; --line:#233248;
+  --accent:#7C98FF; --accent-soft:#18244A; --good:#3FD3AE; --warn:#F3A163; --warn-soft:#3A2414; --good-soft:#10332B; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --paper:#080E19; --card:#111A2B; --ink:#E9EFF8; --muted:#94A3B8; --line:#233248;
+  --accent:#7C98FF; --accent-soft:#18244A; --good:#3FD3AE; --warn:#F3A163; --warn-soft:#3A2414; --good-soft:#10332B; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--paper);color:var(--ink);font-family:var(--f-body);font-size:17px;line-height:1.5;margin:0;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:24px}
+.deck{display:flex;flex-direction:column;align-items:center;gap:24px}
+.slide{width:min(100%,1280px);aspect-ratio:16/9;background:var(--card);border:1px solid var(--line);border-radius:6px;
+  padding:48px 64px;display:flex;flex-direction:column;gap:20px;position:relative;overflow:hidden}
+.slide>*{min-width:0}
+.eyebrow{font:500 13px/1 var(--f-mono);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+h1{font-size:54px;line-height:1.05;font-weight:700}
+h2{font-size:38px;line-height:1.1;font-weight:700;max-width:34ch}
+h3{font-size:22px;font-weight:600}
+p{margin:0;max-width:68ch}
+.lead{font-size:21px;color:var(--ink)} .small{font-size:14.5px;color:var(--muted)} .muted{color:var(--muted)}
+.foot{position:absolute;left:64px;right:64px;bottom:20px;display:flex;justify-content:space-between;font:400 11.5px var(--f-mono);color:var(--muted);letter-spacing:.04em}
+.row{display:flex;gap:40px;flex:1;min-height:0}.row>*{min-width:0}
+.col{display:flex;flex-direction:column;gap:14px;flex:1}
+.good{color:var(--good)} .warn{color:var(--warn)} .accent-t{color:var(--accent)}
+/* pipeline */
+.pipe{display:grid;grid-template-columns:repeat(5,1fr);gap:0;margin-top:auto;border-top:2px solid var(--ink)}
+.st{padding:16px 18px 0 0;position:relative}
+.st:before{content:"";position:absolute;top:-7px;left:0;width:12px;height:12px;border-radius:50%;background:var(--accent)}
+.st b{display:block;font:600 16px var(--f-display);margin:10px 0 6px}
+.st span{font-size:14px;color:var(--muted);display:block}
+.st .n{font:600 24px var(--f-display);color:var(--ink);margin-top:8px}
+/* chart */
+.charts{display:flex;gap:24px;flex:1;min-height:0}.charts>div{flex:1;min-width:0}
+.charts h3{font-size:17px;margin-bottom:2px}
+svg{width:100%;height:auto;display:block;max-height:100%}
+.grid{stroke:var(--line);stroke-width:1}.tick{font:400 12px var(--f-mono);fill:var(--muted)}.axis{font:400 12px var(--f-body);fill:var(--muted)}
+.line{fill:none;stroke-width:2.6}.line.ink{stroke:var(--ink)}.line.accent{stroke:var(--accent)}
+.err{stroke-width:1.6}.err.ink{stroke:var(--ink)}.err.accent{stroke:var(--accent)}
+.dot.ink{fill:var(--ink)}.dot.accent{fill:var(--accent)}
+.val{font:600 12.5px var(--f-mono)}.val.ink{fill:var(--ink)}.val.accent{fill:var(--accent)}
+.legend{display:flex;gap:22px;font-size:14px;color:var(--muted);align-items:center}
+.legend i{display:inline-block;width:26px;height:0;border-top:3px solid var(--ink);vertical-align:middle;margin-right:8px}
+.legend i.f{border-top:3px dashed var(--accent)}
+.callout{border-left:4px solid var(--accent);background:var(--accent-soft);padding:12px 18px;font-size:18px;border-radius:0 4px 4px 0}
+.callout.w{border-left-color:var(--warn);background:var(--warn-soft)}
+/* recall bars */
+.rb-group{margin-bottom:14px}.rb-head{font:500 13px var(--f-mono);color:var(--muted);margin-bottom:6px}
+.rb{display:grid;grid-template-columns:104px 1fr 48px;gap:10px;align-items:center;font-size:15px;margin:4px 0}
+.rb-track,.lb-track{height:14px;background:var(--line);border-radius:2px;display:block}
+.rb-fill,.lb-fill{display:block;height:100%;border-radius:2px}
+.rb-fill.good{background:var(--good)}.rb-fill.warn{background:var(--warn)}
+.rb-val{font:600 14px var(--f-mono);text-align:right}
+.big{font:700 72px/1 var(--f-display);letter-spacing:-.02em}
+.kv{display:flex;flex-direction:column;gap:4px}
+/* quant cards */
+.qcards{display:flex;gap:28px;min-height:0}.qcard{flex:1;border:1px solid var(--line);border-radius:6px;padding:18px 26px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.qrow{display:grid;grid-template-columns:130px 1fr auto;gap:10px;align-items:baseline;border-bottom:1px solid var(--line);padding-bottom:8px;font-size:16px}
+.qrow b{font:600 17px var(--f-mono)} .qrow em{font:600 15px var(--f-body);font-style:normal}
+.qrow span{color:var(--muted);font-size:14.5px}
+.lb{display:grid;grid-template-columns:48px 1fr 78px;gap:10px;align-items:center;font-size:13.5px;margin:3px 0}
+.lb-fill.ink{background:var(--ink)}.lb-fill.accent{background:var(--accent)}.lb b{font:600 13px var(--f-mono);text-align:right}
+/* 5b bars */
+.hb{margin-bottom:14px}.hb-lab{font-size:16px;margin-bottom:5px}
+.hb-track{height:22px;background:var(--line);border-radius:2px}.hb-fill{height:100%;border-radius:2px}
+.hb-fill.ink{background:var(--ink)}.hb-fill.accent{background:var(--accent)}.hb-fill.warn{background:var(--warn)}
+.hb-val{font:600 20px var(--f-mono);margin-top:4px}.hb-val small{font:400 14px var(--f-mono);color:var(--muted)}
+/* table */
+table{border-collapse:collapse;width:100%;font-size:15.5px}
+th{font:500 12px var(--f-mono);letter-spacing:.1em;text-transform:uppercase;color:var(--muted);text-align:left;padding:6px 10px;border-bottom:2px solid var(--ink)}
+td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+td.id{font:600 14px var(--f-mono);white-space:nowrap}
+.tag{display:inline-block;font:600 12px var(--f-mono);padding:3px 8px;border-radius:3px;white-space:nowrap}
+.tag.good{background:var(--good-soft);color:var(--good)}.tag.warn{background:var(--warn-soft);color:var(--warn)}.tag.mid{background:var(--accent-soft);color:var(--accent)}
+ul.clean{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px}
+.scroll{overflow-x:auto;min-width:0}
+/* narrow screens */
+@media (max-width:860px){
+  body{font-size:16px}
+  .slide{aspect-ratio:auto;padding:28px 20px 44px}
+  h1{font-size:36px} h2{font-size:28px}
+  .row,.charts,.qcards{flex-direction:column}
+  .pipe{grid-template-columns:1fr;border-top:0;border-left:2px solid var(--ink);gap:16px;padding-left:16px}
+  .st:before{top:4px;left:-23px}.st{padding:0}
+  .foot{left:20px;right:20px}
+}
+@media print{
+  @page{size:1280px 720px;margin:0}
+  body{padding:0;background:var(--card);font-size:17px}
+  .deck{gap:0;display:block}
+  .slide{width:1280px;height:720px;aspect-ratio:auto;border:0;border-radius:0;page-break-after:always;break-after:page;break-inside:avoid;padding:48px 64px}
+}
+</style>
+</head><body>
+<main class="deck">
+<section class="slide">
+<div class="eyebrow">Project pitch · vision and edge AI</div>
+<h1>Noise-to-Edge Loop</h1>
+<p class="lead">One measured pipeline from damaged training labels to an INT8 model on a CPU. Public MRI data, small 2D models, 30 training runs, every claim checked against a results file.</p>
+<div class="callout"><b>Short answer.</b> At 40% damaged masks the models lose about 0.5 Dice points. The audit caught 53 of 64 damaged cases, but retraining without them did not help. INT8 left the small model's Dice unchanged and made it 3.7× smaller and 2.2× faster on one CPU thread.</div>
+<div class="pipe">
+<div class="st"><b>Damage labels</b><span>3 error types, Dice 0.8 against the clean mask</span><div class="n">0 / 20 / 40%</div></div>
+<div class="st"><b>Train</b><span>2 small models, 3 seeds each</span><div class="n">30 runs</div></div>
+<div class="st"><b>Audit and filter</b><span>existing check drops suspicious cases</span><div class="n">53 of 64 caught</div></div>
+<div class="st"><b>Retrain</b><span>on the filtered set, same seeds</span><div class="n">0.8855 to 0.8927 Dice</div></div>
+<div class="st"><b>INT8 on CPU</b><span>post-training quantization, ONNX Runtime</span><div class="n">3.7× smaller</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>1/8</span></div></section><section class="slide">
+<div class="eyebrow">Why this project</div>
+<h2>Production labels are never perfect, and the model still has to fit on a small device.</h2>
+<div class="row">
+<div class="col"><h3>Three questions, one pipeline</h3>
+<ul class="clean lead">
+<li>How much Dice does a small segmentation model lose when part of its training masks are wrong in known ways?</li>
+<li>How much of that loss does an automatic audit win back by removing suspicious cases?</li>
+<li>What does post-training INT8 cost in Dice, and what does it buy in size and CPU latency?</li></ul></div>
+<div class="col"><h3>How I kept it honest</h3>
+<ul class="clean">
+<li>Predictions P1 to P7 were written in a design file before the main run.</li>
+<li>Split by patient case, never by slice. Test masks are always clean.</li>
+<li>One pilot, one main run, no tuning on the test cases.</li>
+<li>Every number here comes from a results CSV. Failures stay in.</li></ul></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>2/8</span></div></section><section class="slide">
+<div class="eyebrow">What was built</div>
+<h2>Small on purpose: 2D slices, CPU only, public data.</h2>
+<div class="row">
+<div class="col"><h3>Data</h3>
+<p>MSD Task04 Hippocampus, 260 cases, binary mask. 2D axial slices padded to 64×64. Split by case: 160 train, 40 validation, 60 test.</p>
+<h3>Label damage</h3>
+<p>Wrong size, shifted mask or extra island, chosen at random per case, each set to Dice 0.8 against the clean mask. 20% or 40% of training cases are damaged. Validation and test masks stay clean.</p></div>
+<div class="col"><h3>Models</h3>
+<p>A: small U-Net from scratch, 4 levels, base 16 channels.<br>B: U-Net with an ImageNet ResNet18 encoder. A pretrained encoder, not a foundation model.</p>
+<h3>Audit filter</h3>
+<p>An existing detector scores every training case from its image and mask. The top share equal to the nominal noise rate is dropped, without looking at which cases were really damaged.</p>
+<h3>Edge step</h3>
+<p>ONNX export, ONNX Runtime static INT8 with 100 training slices, timed on one CPU thread at batch size 1.</p></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>3/8</span></div></section><section class="slide">
+<div class="eyebrow">Result · label noise</div>
+<h2>With 40% damaged masks, test Dice drops by about half a point.</h2>
+<div class="charts">
+<div><h3>U-Net from scratch</h3><svg viewBox="0 0 560 330" role="img" aria-label="U-Net from scratch: test Dice versus noise rate">
+<line x1="62" x2="536" y1="216.5" y2="216.5" class="grid"/>
+<text x="52" y="220.5" class="tick" text-anchor="end">0.885</text>
+<line x1="62" x2="536" y1="166.9" y2="166.9" class="grid"/>
+<text x="52" y="170.9" class="tick" text-anchor="end">0.890</text>
+<line x1="62" x2="536" y1="117.3" y2="117.3" class="grid"/>
+<text x="52" y="121.3" class="tick" text-anchor="end">0.895</text>
+<line x1="62" x2="536" y1="67.7" y2="67.7" class="grid"/>
+<text x="52" y="71.7" class="tick" text-anchor="end">0.900</text>
+<text x="62.0" y="300" class="tick" text-anchor="middle">0%</text>
+<text x="299.0" y="300" class="tick" text-anchor="middle">20%</text>
+<text x="536.0" y="300" class="tick" text-anchor="middle">40%</text>
+<text x="299.0" y="322" class="axis" text-anchor="middle">share of training cases with damaged masks</text>
+<polyline points="62.0,92.5 299.0,123.2 536.0,144.1" class="line ink" stroke-dasharray=""/>
+<line x1="62.0" x2="62.0" y1="117.3" y2="67.7" class="err ink"/>
+<circle cx="62.0" cy="92.5" r="5" class="dot ink"/>
+<text x="62.0" y="59.7" class="val ink" text-anchor="middle">0.8975</text>
+<line x1="299.0" x2="299.0" y1="138.1" y2="108.4" class="err ink"/>
+<circle cx="299.0" cy="123.2" r="5" class="dot ink"/>
+<text x="299.0" y="100.4" class="val ink" text-anchor="middle">0.8944</text>
+<line x1="536.0" x2="536.0" y1="161.9" y2="126.2" class="err ink"/>
+<circle cx="536.0" cy="144.1" r="5" class="dot ink"/>
+<text x="536.0" y="118.2" class="val ink" text-anchor="middle">0.8923</text>
+<polyline points="62.0,92.5 299.0,147.0 536.0,211.5" class="line accent" stroke-dasharray="6 5"/>
+<line x1="62.0" x2="62.0" y1="117.3" y2="67.7" class="err accent"/>
+<circle cx="62.0" cy="92.5" r="5" class="dot accent"/>
+<line x1="299.0" x2="299.0" y1="166.9" y2="127.2" class="err accent"/>
+<circle cx="299.0" cy="147.0" r="5" class="dot accent"/>
+<text x="299.0" y="183.9" class="val accent" text-anchor="middle">0.8920</text>
+<line x1="536.0" x2="536.0" y1="239.3" y2="183.7" class="err accent"/>
+<circle cx="536.0" cy="211.5" r="5" class="dot accent"/>
+<text x="536.0" y="256.3" class="val accent" text-anchor="middle">0.8855</text>
+</svg></div>
+<div><h3>U-Net with ResNet18 encoder</h3><svg viewBox="0 0 560 330" role="img" aria-label="U-Net with ResNet18 encoder: test Dice versus noise rate">
+<line x1="62" x2="536" y1="216.5" y2="216.5" class="grid"/>
+<text x="52" y="220.5" class="tick" text-anchor="end">0.885</text>
+<line x1="62" x2="536" y1="166.9" y2="166.9" class="grid"/>
+<text x="52" y="170.9" class="tick" text-anchor="end">0.890</text>
+<line x1="62" x2="536" y1="117.3" y2="117.3" class="grid"/>
+<text x="52" y="121.3" class="tick" text-anchor="end">0.895</text>
+<line x1="62" x2="536" y1="67.7" y2="67.7" class="grid"/>
+<text x="52" y="71.7" class="tick" text-anchor="end">0.900</text>
+<text x="62.0" y="300" class="tick" text-anchor="middle">0%</text>
+<text x="299.0" y="300" class="tick" text-anchor="middle">20%</text>
+<text x="536.0" y="300" class="tick" text-anchor="middle">40%</text>
+<text x="299.0" y="322" class="axis" text-anchor="middle">share of training cases with damaged masks</text>
+<polyline points="62.0,107.4 299.0,158.9 536.0,162.9" class="line ink" stroke-dasharray=""/>
+<line x1="62.0" x2="62.0" y1="149.0" y2="65.7" class="err ink"/>
+<circle cx="62.0" cy="107.4" r="5" class="dot ink"/>
+<text x="62.0" y="57.7" class="val ink" text-anchor="middle">0.8960</text>
+<line x1="299.0" x2="299.0" y1="185.7" y2="132.2" class="err ink"/>
+<circle cx="299.0" cy="158.9" r="5" class="dot ink"/>
+<text x="299.0" y="124.2" class="val ink" text-anchor="middle">0.8908</text>
+<line x1="536.0" x2="536.0" y1="186.7" y2="139.1" class="err ink"/>
+<circle cx="536.0" cy="162.9" r="5" class="dot ink"/>
+<text x="536.0" y="131.1" class="val ink" text-anchor="middle">0.8904</text>
+<polyline points="62.0,107.4 299.0,140.1 536.0,181.8" class="line accent" stroke-dasharray="6 5"/>
+<line x1="62.0" x2="62.0" y1="149.0" y2="65.7" class="err accent"/>
+<circle cx="62.0" cy="107.4" r="5" class="dot accent"/>
+<line x1="299.0" x2="299.0" y1="162.9" y2="117.3" class="err accent"/>
+<circle cx="299.0" cy="140.1" r="5" class="dot accent"/>
+<text x="299.0" y="179.9" class="val accent" text-anchor="middle">0.8927</text>
+<line x1="536.0" x2="536.0" y1="189.7" y2="173.8" class="err accent"/>
+<circle cx="536.0" cy="181.8" r="5" class="dot accent"/>
+<text x="536.0" y="206.7" class="val accent" text-anchor="middle">0.8885</text>
+</svg></div>
+</div>
+<div class="legend"><span><i></i>no filter</span><span><i class="f"></i>audit-filtered</span><span>mean ± SD over 3 seeds, clean test cases</span></div>
+<div class="callout">Clean to 40% noise: scratch −0.0052, ResNet18 −0.0056 Dice. Seed-to-seed SD is 0.0015 to 0.0042, so the effect is small and only just visible.</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>4/8</span></div></section><section class="slide">
+<div class="eyebrow">Result · audit filter</div>
+<h2>The audit finds most damaged cases. Removing them did not bring Dice back.</h2>
+<div class="row">
+<div class="col"><h3>Share of damaged cases caught, by error type</h3><div class="rb-group"><div class="rb-head">20% of cases damaged (32 cases)</div><div class="rb"><span class="rb-lab">extra island</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">wrong size</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">shift</span><span class="rb-track"><span class="rb-fill warn" style="width:53%"></span></span><span class="rb-val">53%</span></div></div><div class="rb-group"><div class="rb-head">40% of cases damaged (64 cases)</div><div class="rb"><span class="rb-lab">extra island</span><span class="rb-track"><span class="rb-fill good" style="width:100%"></span></span><span class="rb-val">100%</span></div><div class="rb"><span class="rb-lab">wrong size</span><span class="rb-track"><span class="rb-fill good" style="width:89%"></span></span><span class="rb-val">89%</span></div><div class="rb"><span class="rb-lab">shift</span><span class="rb-track"><span class="rb-fill warn" style="width:61%"></span></span><span class="rb-val">61%</span></div></div>
+<p class="small">Overall: 24 of 32 caught at 20%, 53 of 64 at 40%. Shifted masks are the weak spot, as in the earlier audit.</p></div>
+<div class="col"><h3>Test Dice after retraining on the filtered set</h3>
+<table><tr><th>Model</th><th>Noise</th><th>Change vs no filter</th></tr>
+<tr><td>Scratch</td><td>20%</td><td class="warn"><b>−0.0024</b></td></tr>
+<tr><td>Scratch</td><td>40%</td><td class="warn"><b>−0.0068</b></td></tr>
+<tr><td>ResNet18</td><td>20%</td><td class="good"><b>+0.0019</b></td></tr>
+<tr><td>ResNet18</td><td>40%</td><td class="warn"><b>−0.0019</b></td></tr></table>
+<div class="callout w">Dropping 20% to 40% of the training cases costs about as much as the damaged labels did. At this noise size there was little to recover.</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>5/8</span></div></section><section class="slide">
+<div class="eyebrow">Result · INT8 on a CPU</div>
+<h2>INT8 was free for the small U-Net and cost 0.013 Dice for the larger one.</h2>
+<div class="qcards">
+<div class="qcard">
+<h3>U-Net from scratch</h3>
+<div class="qrow"><span>Test Dice</span><b>0.8952 → 0.8952</b><em class="good">no change</em></div>
+<div class="qrow"><span>File size</span><b>1.93 → 0.53 MB</b><em class="good">3.7× smaller</em></div>
+<div class="qrow"><span>Latency, median</span><b>2.58 → 1.18 ms</b><em class="good">2.2× faster</em></div>
+<div class="lat"><div class="lb"><span>FP32</span><span class="lb-track"><span class="lb-fill ink" style="width:43%"></span></span><b>2.58 ms</b></div><div class="lb"><span>INT8</span><span class="lb-track"><span class="lb-fill accent" style="width:19%"></span></span><b>1.18 ms</b></div></div>
+<p class="small">Smallest model, and INT8 left its test Dice unchanged to four decimals.</p></div>
+<div class="qcard">
+<h3>U-Net with ResNet18 encoder</h3>
+<div class="qrow"><span>Test Dice</span><b>0.8912 → 0.8779</b><em class="warn">−0.0133</em></div>
+<div class="qrow"><span>File size</span><b>57.28 → 14.47 MB</b><em class="good">4.0× smaller</em></div>
+<div class="qrow"><span>Latency, median</span><b>6.07 → 2.10 ms</b><em class="good">2.9× faster</em></div>
+<div class="lat"><div class="lb"><span>FP32</span><span class="lb-track"><span class="lb-fill ink" style="width:100%"></span></span><b>6.07 ms</b></div><div class="lb"><span>INT8</span><span class="lb-track"><span class="lb-fill accent" style="width:35%"></span></span><b>2.10 ms</b></div></div>
+<p class="small">Larger model, larger gain in size and speed, and a visible Dice loss.</p></div>
+</div>
+<div class="callout">Next step before shipping the larger model: check where the 0.0133 Dice goes, for example with a better calibration set or quantization-aware training. Neither was tried here.</div>
+<p class="small">Measured on a 4-core cloud CPU, ONNX Runtime 1.29.0, one thread, batch size 1, 1501 test slices. Models: noise 0, seed 0. Post-training quantization, no QAT, not an embedded target.</p>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>6/8</span></div></section><section class="slide">
+<div class="eyebrow">Extra arm · synthetic data</div>
+<h2>A toy synthetic generator helped a little, and only when real data followed.</h2>
+<div class="row">
+<div class="col"><h3>Test Dice on real held-out cases, 3 seeds</h3><div class="hb"><div class="hb-lab">(i) 20 real cases only</div><div class="hb-track"><div class="hb-fill ink" style="width:85.7%"></div></div><div class="hb-val">0.8568<small> ± 0.0062</small></div></div><div class="hb"><div class="hb-lab">(ii) synthetic pretrain, then the same 20 cases</div><div class="hb-track"><div class="hb-fill accent" style="width:86.7%"></div></div><div class="hb-val">0.8673<small> ± 0.0059</small></div></div><div class="hb"><div class="hb-lab">(iii) synthetic only, no real case</div><div class="hb-track"><div class="hb-fill warn" style="width:34.3%"></div></div><div class="hb-val">0.3429<small> ± 0.0094</small></div></div></div>
+<div class="col"><h3>Why the gap is so large</h3>
+<p>500 randomised ellipsoid volumes (random pose, size, contrast, blur and noise) are much easier to see than a real hippocampus.</p>
+<p>Contrast-to-noise inside versus outside the mask: <b>2.41</b> synthetic against <b>0.55</b> real.</p>
+<div class="callout">Synthetic pretraining plus fine-tuning beat 20 real cases alone by +0.0105 on average, but not in every seed (+0.0145, +0.0173, −0.0003). I report it as a weak positive.</div></div>
+</div>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>7/8</span></div></section><section class="slide">
+<div class="eyebrow">Scorecard and limits</div>
+<h2>Seven predictions written in advance. Two held, two missed, three held in part.</h2>
+<div class="scroll"><table>
+<tr><th>#</th><th>Prediction</th><th>Outcome</th></tr>
+<tr><td class="id">P1</td><td>40% noise lowers Dice by more than 1 SD</td><td><span class="tag good">HELD</span> drop of 0.0052 (scratch) and 0.0056 (ResNet18, marginal)</td></tr>
+<tr><td class="id">P2</td><td>Pretrained encoder loses less to noise</td><td><span class="tag warn">NO</span> 0.0056 against 0.0052</td></tr>
+<tr><td class="id">P3</td><td>Filter recovers part of the loss, recall below 0.8</td><td><span class="tag warn">NO</span> no recovery, recall 0.83 at 40%</td></tr>
+<tr><td class="id">P4</td><td>INT8 loses less than 0.01 Dice</td><td><span class="tag mid">SPLIT</span> scratch 0.0000 change, ResNet18 −0.0133</td></tr>
+<tr><td class="id">P5</td><td>INT8 3 to 4× smaller, latency gain unclear</td><td><span class="tag mid">PARTLY</span> 3.7× and 4.0× smaller; both faster, I expected no gain for scratch</td></tr>
+<tr><td class="id">P6</td><td>Synthetic only is clearly worse than real only</td><td><span class="tag good">HELD</span> 0.3429 against 0.8568</td></tr>
+<tr><td class="id">P7</td><td>Pretrain plus fine-tune beats real only by more than 1 SD</td><td><span class="tag mid">WEAK</span> +0.0105 on average, 2 of 3 seeds</td></tr>
+</table></div>
+<p class="small"><b>Limits:</b> one small public dataset, 2D slices of about 50×35 pixels, no clinical claim. Synthetic damage at Dice 0.8, not matched to real annotator disagreement. One split and one noise draw, so SD covers training seeds only. INT8 numbers come from one model per architecture on a cloud CPU, not an embedded device or a laptop. No QAT, no 3D.</p>
+<div class="foot"><span>NOISE-TO-EDGE LOOP · FEIXIANG XIAO</span><span>8/8</span></div></section>
+</main>
+</body></html>
